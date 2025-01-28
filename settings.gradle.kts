@@ -20,5 +20,5 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "UPITranzact Sdk"
-//include(":app")
+include(":app")
 include(":android_sdk")

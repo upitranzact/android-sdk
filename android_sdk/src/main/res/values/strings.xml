@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">UPITranzact Android SDK</string>
+    <string name="payment_pending">Payment Pending</string>
+    <string name="payment_reject">Payment Rejected</string>
+    <string name="payment_failed">Payment Failed</string>
+    <string name="payment_successful">Payment Successful</string>
+</resources>

@@ -57,7 +57,7 @@ publishing {
     publications {
         register<MavenPublication>("release") {
             groupId = "com.github.upitranzact"
-            artifactId = "android-sdk"
+            artifactId = "sdk"
             version = "1.0.0"
 
             afterEvaluate {

@@ -57,7 +57,7 @@ public class CheckoutActivity extends AppCompatActivity {
 
     private Context context;
     LinearLayout screen_loading;
-    TextView amount_tv;
+    TextView amount_tv, merchantName;
     private Handler handler;
     private Runnable pollingRunnable;
     private String orderId;
@@ -81,6 +81,7 @@ public class CheckoutActivity extends AppCompatActivity {
 
         screen_loading = findViewById(R.id.screen_loading);
         amount_tv = findViewById(R.id.amount_tv);
+        merchantName = findViewById(R.id.merchantName);
         requestButton = findViewById(R.id.requestButton);
 
         RelativeLayout showDialogButton = findViewById(R.id.cancel_payment);
@@ -130,7 +131,10 @@ public class CheckoutActivity extends AppCompatActivity {
                 if (jsonResponse.getBoolean("status")) {
                     screen_loading.setVisibility(View.GONE);
                     String dynamicQR = jsonResponse.getJSONObject("data").getString("dynamicQR");
-                    amount_tv.setText(String.format("INR%s", jsonResponse.getJSONObject("data").getString("amount")));
+
+                    amount_tv.setText("INR " + jsonResponse.getJSONObject("data").getString("amount"));
+                    merchantName.setText(jsonResponse.getJSONObject("data").getString("merchantName"));
+
                     ImageView qrImageView = findViewById(R.id.qr_code);
 
                     if (dynamicQR.contains(",")) {
@@ -294,8 +298,8 @@ public class CheckoutActivity extends AppCompatActivity {
     public void checkPaymentStatusWithPolling(final String publicKey, final String secretKey, final String mid,
                                               final String orderId) {
         handler = new Handler();
-        final int pollingInterval = 10000;
-        final int maxAttempts = 30;
+        final int pollingInterval = 5000;
+        final int maxAttempts = 60;
         final int[] attemptCounter = {0};
 
         pollingRunnable = new Runnable() {

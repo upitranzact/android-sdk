@@ -42,7 +42,6 @@ import com.android.volley.toolbox.Volley;
 import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.upitranzact.sdk.network.PaymentCallback;
-import com.upitranzact.sdk.utils.QRCodeGenerator;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -58,6 +57,7 @@ public class CheckoutActivity extends AppCompatActivity {
 
     private Context context;
     LinearLayout screen_loading;
+    TextView amount_tv;
     private Handler handler;
     private Runnable pollingRunnable;
     private String orderId;
@@ -80,6 +80,7 @@ public class CheckoutActivity extends AppCompatActivity {
         context = CheckoutActivity.this;
 
         screen_loading = findViewById(R.id.screen_loading);
+        amount_tv = findViewById(R.id.amount_tv);
         requestButton = findViewById(R.id.requestButton);
 
         RelativeLayout showDialogButton = findViewById(R.id.cancel_payment);
@@ -91,7 +92,6 @@ public class CheckoutActivity extends AppCompatActivity {
         String mid = Objects.requireNonNull(intent.getStringExtra("mid")).trim();
         String amount = Objects.requireNonNull(intent.getStringExtra("amount")).trim();
         orderId = Objects.requireNonNull(intent.getStringExtra("orderId")).trim();
-        String redirectUrl = Objects.requireNonNull(intent.getStringExtra("redirectUrl")).trim();
         String customerName = Objects.requireNonNull(intent.getStringExtra("customerName")).trim();
         String customerEmail = Objects.requireNonNull(intent.getStringExtra("customerEmail")).trim();
         String customerMobile = Objects.requireNonNull(intent.getStringExtra("customerMobile")).trim();
@@ -103,14 +103,14 @@ public class CheckoutActivity extends AppCompatActivity {
         }
 
         if (isNullOrEmpty(publicKey) || isNullOrEmpty(secretKey) || isNullOrEmpty(mid) || isNullOrEmpty(amount)
-                || isNullOrEmpty(orderId) || isNullOrEmpty(redirectUrl) || isNullOrEmpty(customerName)
+                || isNullOrEmpty(orderId) || isNullOrEmpty(customerName)
                 || isNullOrEmpty(customerEmail) || isNullOrEmpty(customerMobile)) {
 
             showErrorAndExit();
             return;
         }
 
-        createOrder(publicKey, secretKey, mid, amount, orderId, redirectUrl, customerName, customerEmail,
+        createOrder(publicKey, secretKey, mid, amount, orderId, customerName, customerEmail,
                 customerMobile);
 
         checkPaymentStatusWithPolling(publicKey, secretKey, mid, orderId);
@@ -118,8 +118,7 @@ public class CheckoutActivity extends AppCompatActivity {
         startCountdownTimer(5, context);
     }
 
-    public void createOrder(String publicKey, String secretKey, String mid, String amount, String orderId,
-                            String redirectUrl, String customerName, String customerEmail, String customerMobile) {
+    public void createOrder(String publicKey, String secretKey, String mid, String amount, String orderId, String customerName, String customerEmail, String customerMobile) {
 
         screen_loading.setVisibility(View.VISIBLE);
 
@@ -131,17 +130,24 @@ public class CheckoutActivity extends AppCompatActivity {
                 if (jsonResponse.getBoolean("status")) {
                     screen_loading.setVisibility(View.GONE);
                     String dynamicQR = jsonResponse.getJSONObject("data").getString("dynamicQR");
-
-                    Bitmap logo = BitmapFactory.decodeResource(getResources(), R.drawable.u_logo);
-                    Bitmap qrCodeWithLogo = QRCodeGenerator.generateQRCodeWithLogo(dynamicQR, logo);
+                    amount_tv.setText(String.format("INR%s", jsonResponse.getJSONObject("data").getString("amount")));
                     ImageView qrImageView = findViewById(R.id.qr_code);
-                    qrImageView.setImageBitmap(qrCodeWithLogo);
+
+                    if (dynamicQR.contains(",")) {
+                        dynamicQR = dynamicQR.split(",")[1];
+                    }
+
+                    byte[] decodedBytes = Base64.decode(dynamicQR, Base64.DEFAULT);
+                    Bitmap bitmap = BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.length);
+
+                    qrImageView.setImageBitmap(bitmap);
+
 
                     RelativeLayout save_qr_code = findViewById(R.id.save_qr_code);
                     save_qr_code.setOnClickListener(new View.OnClickListener() {
                         @Override
                         public void onClick(View v) {
-                            saveImageToGallery(qrCodeWithLogo, orderId);
+                            saveImageToGallery(bitmap, orderId);
                         }
                     });
 
@@ -261,7 +267,7 @@ public class CheckoutActivity extends AppCompatActivity {
                 params.put("mid", mid);
                 params.put("amount", amount);
                 params.put("order_id", orderId);
-                params.put("redirect_url", redirectUrl);
+                params.put("redirect_url", "https://upitranzact.com");
                 params.put("note", "Add money");
                 params.put("customer_name", customerName);
                 params.put("customer_email", customerEmail);

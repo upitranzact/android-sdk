@@ -122,6 +122,66 @@
                 android:orientation="vertical"
                 android:padding="20dp">
 
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <RelativeLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_centerVertical="true"
+                            android:layout_marginVertical="15dp"
+                            android:fontFamily="@font/roboto_regular"
+                            android:text="Amount"
+                            android:textColor="@color/black"
+                            android:textSize="15sp"
+                            android:textStyle="bold" />
+
+                        <RelativeLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_alignParentEnd="true"
+                            android:layout_centerVertical="true"
+                            android:gravity="center_vertical">
+
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_centerVertical="true"
+                                android:layout_marginVertical="5dp"
+                                android:gravity="center_vertical">
+
+                                <TextView
+                                    android:id="@+id/amount_tv"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="7dp"
+                                    android:fontFamily="@font/roboto_regular"
+                                    android:text="INR 0"
+                                    android:textColor="@color/black"
+                                    android:textSize="15sp"
+                                    android:textStyle="normal" />
+
+                            </LinearLayout>
+
+                        </RelativeLayout>
+
+                    </RelativeLayout>
+
+                    <ImageView
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginTop="5dp"
+                        android:layout_marginBottom="15dp"
+                        android:src="@drawable/dotted_line" />
+
+                </LinearLayout>
+
                 <RelativeLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content">
@@ -129,6 +189,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:layout_centerVertical="true"
                         android:layout_marginVertical="15dp"
                         android:fontFamily="@font/roboto_regular"
                         android:text="UPI QR"
@@ -147,7 +208,6 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_centerVertical="true"
-                            android:layout_marginHorizontal="15dp"
                             android:layout_marginVertical="5dp"
                             android:gravity="center_vertical">
 
@@ -170,7 +230,6 @@
 
                         </LinearLayout>
 
-
                     </RelativeLayout>
 
                 </RelativeLayout>
@@ -180,6 +239,7 @@
                     android:layout_height="wrap_content"
                     android:layout_gravity="center_vertical"
                     android:background="@drawable/rounded_corners"
+                    android:gravity="center_vertical"
                     android:orientation="horizontal">
 
                     <ImageView
@@ -187,7 +247,7 @@
                         android:layout_width="120dp"
                         android:layout_height="120dp"
                         android:adjustViewBounds="true"
-                        android:padding="0dp"
+                        android:padding="15dp"
                         android:scaleType="fitXY"
                         android:src="@drawable/qr" />
 
@@ -197,7 +257,7 @@
                         android:layout_marginStart="0dp"
                         android:gravity="center_vertical"
                         android:orientation="vertical"
-                        android:padding="15dp">
+                        android:padding="0dp">
 
                         <TextView
                             android:layout_width="wrap_content"

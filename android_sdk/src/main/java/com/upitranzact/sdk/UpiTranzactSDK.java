@@ -20,11 +20,11 @@ public class UpiTranzactSDK {
         this.mid = mid;
     }
 
-    public void startPayment(String amount, String orderId, String redirectUrl, String customerName,
+    public void startPayment(String amount, String orderId, String customerName,
                              String customerEmail, String customerMobile, final PaymentCallback callback) {
         setPaymentCallback(callback);
         if (isNullOrEmpty(publicKey) || isNullOrEmpty(secretKey) || isNullOrEmpty(mid) || isNullOrEmpty(amount)
-                || isNullOrEmpty(orderId) || isNullOrEmpty(redirectUrl) || isNullOrEmpty(customerName)
+                || isNullOrEmpty(orderId) || isNullOrEmpty(customerName)
                 || isNullOrEmpty(customerEmail) || isNullOrEmpty(customerMobile)) {
 
             if (callback != null) {
@@ -39,7 +39,6 @@ public class UpiTranzactSDK {
         intent.putExtra("mid", mid);
         intent.putExtra("amount", amount);
         intent.putExtra("orderId", orderId);
-        intent.putExtra("redirectUrl", redirectUrl);
         intent.putExtra("customerName", customerName);
         intent.putExtra("customerEmail", customerEmail);
         intent.putExtra("customerMobile", customerMobile);

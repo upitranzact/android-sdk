@@ -29,19 +29,18 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
 import com.airbnb.lottie.LottieAnimationView;
 import com.airbnb.lottie.LottieDrawable;
-import com.android.volley.AuthFailureError;
-import com.android.volley.Request;
-import com.android.volley.RequestQueue;
-import com.android.volley.toolbox.StringRequest;
-import com.android.volley.toolbox.Volley;
 import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
+import com.upitranzact.sdk.model.ApiResponse;
+import com.upitranzact.sdk.network.ApiService;
 import com.upitranzact.sdk.network.PaymentCallback;
+import com.upitranzact.sdk.utils.RetrofitClient;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -52,6 +51,10 @@ import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 public class CheckoutActivity extends AppCompatActivity {
 
@@ -110,189 +113,129 @@ public class CheckoutActivity extends AppCompatActivity {
             showErrorAndExit();
             return;
         }
-
+        screen_loading.setVisibility(View.VISIBLE);
         createOrder(publicKey, secretKey, mid, amount, orderId, customerName, customerEmail,
                 customerMobile);
 
         checkPaymentStatusWithPolling(publicKey, secretKey, mid, orderId);
 
-        startCountdownTimer(5, context);
+        startCountdownTimer(5);
     }
 
-    public void createOrder(String publicKey, String secretKey, String mid, String amount, String orderId, String customerName, String customerEmail, String customerMobile) {
+    public void createOrder(String publicKey, String secretKey, String mid, String amount, String orderId,
+                            String customerName, String customerEmail, String customerMobile) {
 
-        screen_loading.setVisibility(View.VISIBLE);
+        ApiService apiService = RetrofitClient.getApiService(publicKey, secretKey);
 
-        StringRequest stringRequest = new StringRequest(Request.Method.POST,
-                "https://api.upitranzact.com/v1/payments/createPaymentIntent", response -> {
-            Log.d("API Response", "Response: " + response);
-            try {
-                JSONObject jsonResponse = new JSONObject(response);
-                if (jsonResponse.getBoolean("status")) {
+        Call<ApiResponse> call = apiService.createOrder(mid, amount, orderId, "https://upitranzact.com",
+                "Add money", customerName, customerEmail, customerMobile);
+
+        call.enqueue(new Callback<ApiResponse>() {
+
+            @Override
+            public void onResponse(@NonNull Call<ApiResponse> call, @NonNull Response<ApiResponse> response) {
+                if (response.isSuccessful() && response.body() != null) {
                     screen_loading.setVisibility(View.GONE);
-                    String dynamicQR = jsonResponse.getJSONObject("data").getString("dynamicQR");
+                    ApiResponse apiResponse = response.body();
+                    if (apiResponse.getStatus()) {
+                        String dynamicQR = apiResponse.getData().getDynamicQR();
+                        String amount = apiResponse.getData().getAmount();
 
-                    amount_tv.setText("INR " + jsonResponse.getJSONObject("data").getString("amount"));
-                    merchantName.setText(jsonResponse.getJSONObject("data").getString("merchantName"));
+                        amount_tv.setText("INR " + amount);
+                        merchantName.setText(apiResponse.getData().getMerchantName());
 
-                    ImageView qrImageView = findViewById(R.id.qr_code);
+                        ImageView qrImageView = findViewById(R.id.qrImageView);
 
-                    if (dynamicQR.contains(",")) {
-                        dynamicQR = dynamicQR.split(",")[1];
-                    }
-
-                    byte[] decodedBytes = Base64.decode(dynamicQR, Base64.DEFAULT);
-                    Bitmap bitmap = BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.length);
-
-                    qrImageView.setImageBitmap(bitmap);
-
-
-                    RelativeLayout save_qr_code = findViewById(R.id.save_qr_code);
-                    save_qr_code.setOnClickListener(new View.OnClickListener() {
-                        @Override
-                        public void onClick(View v) {
-                            saveImageToGallery(bitmap, orderId);
+                        if (dynamicQR.contains(",")) {
+                            dynamicQR = dynamicQR.split(",")[1];
                         }
-                    });
 
-                    RelativeLayout gpay = findViewById(R.id.gpay);
-                    gpay.setOnClickListener(v -> {
-                        try {
-                            processingPaymentDialog(context);
-                            String upiLink = jsonResponse.getJSONObject("data").getString("gpay");
-                            openUPIIntent(upiLink);
-                        } catch (JSONException e) {
-                            e.printStackTrace();
-                            Toast.makeText(CheckoutActivity.this, "Error parsing JSON: " + e.getMessage(),
-                                    Toast.LENGTH_LONG).show();
-                        }
-                    });
+                        byte[] decodedBytes = Base64.decode(dynamicQR, Base64.DEFAULT);
+                        Bitmap bitmap = BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.length);
 
-                    RelativeLayout phonepe = findViewById(R.id.phonepe);
-                    phonepe.setOnClickListener(v -> {
-                        try {
-                            processingPaymentDialog(context);
-                            String upiLink = jsonResponse.getJSONObject("data").getString("phonepe");
-                            openUPIIntent(upiLink);
-                        } catch (JSONException e) {
-                            e.printStackTrace();
-                            Toast.makeText(CheckoutActivity.this, "Error parsing JSON: " + e.getMessage(),
-                                    Toast.LENGTH_LONG).show();
-                        }
-                    });
+                        qrImageView.setImageBitmap(bitmap);
 
-                    RelativeLayout paytm = findViewById(R.id.paytm);
-                    paytm.setOnClickListener(v -> {
-                        try {
-                            processingPaymentDialog(context);
-                            String upiLink = jsonResponse.getJSONObject("data").getString("paytm");
-                            openUPIIntent(upiLink);
-                        } catch (JSONException e) {
-                            e.printStackTrace();
-                            Toast.makeText(CheckoutActivity.this, "Error parsing JSON: " + e.getMessage(),
-                                    Toast.LENGTH_LONG).show();
-                        }
-                    });
 
-                    RelativeLayout cred = findViewById(R.id.cred);
-                    cred.setOnClickListener(v -> {
-                        try {
-                            processingPaymentDialog(context);
-                            String upiLink = jsonResponse.getJSONObject("data").getString("cred");
-                            openUPIIntent(upiLink);
-                        } catch (JSONException e) {
-                            e.printStackTrace();
-                            Toast.makeText(CheckoutActivity.this, "Error parsing JSON: " + e.getMessage(),
-                                    Toast.LENGTH_LONG).show();
-                        }
-                    });
-
-                    RelativeLayout bhim = findViewById(R.id.bhim);
-                    bhim.setOnClickListener(v -> {
-                        try {
-                            processingPaymentDialog(context);
-                            String upiLink = jsonResponse.getJSONObject("data").getString("intent");
-                            openUPIIntent(upiLink);
-                        } catch (JSONException e) {
-                            e.printStackTrace();
-                            Toast.makeText(CheckoutActivity.this, "Error parsing JSON: " + e.getMessage(),
-                                    Toast.LENGTH_LONG).show();
-                        }
-                    });
-
-                    EditText upiEditText = findViewById(R.id.upiEditText);
-                    requestButton.setOnClickListener(new View.OnClickListener() {
-                        @Override
-                        public void onClick(View v) {
-                            requestButton.setText("Requesting...");
-                            String upiId = upiEditText.getText().toString().trim();
-                            String upiPattern = "^[\\w.-]+@[\\w.-]+$";
-
-                            if (upiId.isEmpty() || !upiId.matches(upiPattern)) {
-                                requestButton.setText("Verify and Pay");
-                                Toast.makeText(CheckoutActivity.this, "Please enter a valid UPI ID!!",
-                                        Toast.LENGTH_SHORT).show();
-                            } else {
-                                createPaymentRequest(publicKey, secretKey, mid, amount, orderId, upiId,
-                                        customerName, customerEmail, customerMobile);
+                        RelativeLayout save_qr_code = findViewById(R.id.save_qr_code);
+                        save_qr_code.setOnClickListener(new View.OnClickListener() {
+                            @Override
+                            public void onClick(View v) {
+                                saveImageToGallery(bitmap, orderId);
                             }
+                        });
 
-                        }
-                    });
+                        RelativeLayout gpay = findViewById(R.id.gpay);
+                        gpay.setOnClickListener(v -> {
+                            processingPaymentDialog(context);
+                            String upiLink = apiResponse.getData().getGpay();
+                            openUPIIntent(upiLink);
+                        });
 
+                        RelativeLayout phonepe = findViewById(R.id.phonepe);
+                        phonepe.setOnClickListener(v -> {
+                            processingPaymentDialog(context);
+                            String upiLink = apiResponse.getData().getPhonepe();
+                            openUPIIntent(upiLink);
+                        });
+
+                        RelativeLayout paytm = findViewById(R.id.paytm);
+                        paytm.setOnClickListener(v -> {
+                            processingPaymentDialog(context);
+                            String upiLink = apiResponse.getData().getPaytm();
+                            openUPIIntent(upiLink);
+                        });
+
+                        RelativeLayout cred = findViewById(R.id.cred);
+                        cred.setOnClickListener(v -> {
+                            processingPaymentDialog(context);
+                            String upiLink = apiResponse.getData().getCred();
+                            openUPIIntent(upiLink);
+                        });
+
+                        RelativeLayout bhim = findViewById(R.id.bhim);
+                        bhim.setOnClickListener(v -> {
+                            processingPaymentDialog(context);
+                            String upiLink = apiResponse.getData().getIntent();
+                            openUPIIntent(upiLink);
+                        });
+
+                        EditText upiEditText = findViewById(R.id.upiEditText);
+                        requestButton.setOnClickListener(new View.OnClickListener() {
+                            @Override
+                            public void onClick(View v) {
+                                requestButton.setText("Requesting...");
+                                String upiId = upiEditText.getText().toString().trim();
+                                String upiPattern = "^[\\w.-]+@[\\w.-]+$";
+
+                                if (upiId.isEmpty() || !upiId.matches(upiPattern)) {
+                                    requestButton.setText("Verify and Pay");
+                                    Toast.makeText(CheckoutActivity.this, "Please enter a valid UPI ID!!",
+                                            Toast.LENGTH_SHORT).show();
+                                } else {
+                                    createPaymentRequest(publicKey, secretKey, mid, amount, orderId, upiId,
+                                            customerName, customerEmail, customerMobile);
+                                }
+
+                            }
+                        });
+                    } else {
+                        notifyPaymentResult(false, orderId, "Payment failed: " + apiResponse.getMsg());
+                    }
                 } else {
-                    notifyPaymentResult(false, orderId, "Payment failed: " + jsonResponse.getString("msg"));
-                }
-            } catch (JSONException e) {
-                notifyPaymentResult(false, orderId, "Response parse error: " + e.getMessage());
-            }
-        }, error -> {
-            if (error.networkResponse != null) {
-                try {
-                    String errorData = new String(error.networkResponse.data);
-                    JSONObject errorResponse = new JSONObject(errorData);
+                    String message = (response.body() != null && response.body().getMsg() != null && !response.body().getMsg().isEmpty())
+                            ? response.body().getMsg()
+                            : "API response failed";
 
-                    String errorMessage = errorResponse.getString("msg");
-                    Log.e("API Error", "Message: " + errorMessage);
-                    notifyPaymentResult(false, orderId, errorMessage);
+                    notifyPaymentResult(false, orderId, message);
 
-                } catch (JSONException e) {
-                    Log.e("API Error", "Response parse error: " + e.getMessage());
-                    notifyPaymentResult(false, orderId, "Response parse error: " + e.getMessage());
                 }
-            } else {
-                Log.e("API Error", "Network Error: " + error.getMessage());
-                notifyPaymentResult(false, orderId, "Network error: " + error.getMessage());
-            }
-        }) {
-            @Override
-            protected Map<String, String> getParams() {
-                Map<String, String> params = new HashMap<>();
-                params.put("mid", mid);
-                params.put("amount", amount);
-                params.put("order_id", orderId);
-                params.put("redirect_url", "https://upitranzact.com");
-                params.put("note", "Add money");
-                params.put("customer_name", customerName);
-                params.put("customer_email", customerEmail);
-                params.put("customer_mobile", customerMobile);
-                return params;
             }
 
             @Override
-            public Map<String, String> getHeaders() throws AuthFailureError {
-                Map<String, String> headers = new HashMap<>();
-                String authHeader = "Basic "
-                        + Base64.encodeToString((publicKey + ":" + secretKey).getBytes(), Base64.NO_WRAP);
-                headers.put("Authorization", authHeader);
-                headers.put("Content-Type", "application/x-www-form-urlencoded");
-                headers.put("User-Agent", "Mozilla/5.0 (Linux; Android 10; Mobile)");
-                return headers;
+            public void onFailure(@NonNull Call<ApiResponse> call, @NonNull Throwable t) {
+                notifyPaymentResult(false, orderId, "Network error: " + t.getMessage());
             }
-        };
-
-        RequestQueue requestQueue = Volley.newRequestQueue(context);
-        requestQueue.add(stringRequest);
+        });
     }
 
     public void checkPaymentStatusWithPolling(final String publicKey, final String secretKey, final String mid,
@@ -313,84 +256,40 @@ public class CheckoutActivity extends AppCompatActivity {
 
                 attemptCounter[0]++;
 
-                StringRequest stringRequest = new StringRequest(Request.Method.POST,
-                        "https://api.upitranzact.com/v1/payments/checkPaymentStatus", response -> {
-                    Log.d("API Response", "Response: " + response);
-                    try {
-                        JSONObject jsonResponse = new JSONObject(response);
-                        String txnStatus = jsonResponse.getString("txnStatus");
-                        if (jsonResponse.getBoolean("status")) {
-                            switch (txnStatus) {
-                                case "SUCCESS":
-                                    failedOrSuccessPaymentDialog(context, "SUCCESS", orderId);
-                                    break;
-                                case "FAIL":
-                                    failedOrSuccessPaymentDialog(context, "FAIL", orderId);
-                                    break;
-                                case "REJECT":
-                                    failedOrSuccessPaymentDialog(context, "REJECT", orderId);
-                                    break;
-                                default:
-                                    failedOrSuccessPaymentDialog(context, "FAILED", orderId);
-                                    break;
-                            }
-                        } else {
-                            switch (txnStatus) {
-                                case "FAIL":
-                                    failedOrSuccessPaymentDialog(context, "FAIL", orderId);
-                                    break;
-                                case "REJECT":
-                                    failedOrSuccessPaymentDialog(context, "REJECT", orderId);
-                                    break;
-                                default:
-                                    break;
-                            }
-                        }
-                    } catch (JSONException e) {
-                        Toast.makeText(context, "Response parse error: " + e.getMessage(), Toast.LENGTH_SHORT)
-                                .show();
-                    }
-                }, error -> {
-                    if (error.networkResponse != null) {
-                        try {
-                            String errorData = new String(error.networkResponse.data);
-                            JSONObject errorResponse = new JSONObject(errorData);
-                            String errorMessage = errorResponse.getString("msg");
-                            Log.e("API Error", "Message: " + errorMessage);
-                            Toast.makeText(context, "Message: " + errorMessage, Toast.LENGTH_SHORT).show();
-                        } catch (JSONException e) {
-                            Log.e("API Error", "Response parse error: " + e.getMessage());
-                            Toast.makeText(context, "Response parse error: " + e.getMessage(),
-                                    Toast.LENGTH_SHORT).show();
-                        }
-                    } else {
-                        Log.e("API Error", "Network Error: " + error.getMessage());
-                        Toast.makeText(context, "Network error: " + error.getMessage(), Toast.LENGTH_SHORT)
-                                .show();
-                    }
-                }) {
+                ApiService apiService = RetrofitClient.getApiService(publicKey, secretKey);
+                Call<ApiResponse> call = apiService.checkPaymentStatus(mid, orderId);
+
+                call.enqueue(new Callback<ApiResponse>() {
                     @Override
-                    protected Map<String, String> getParams() {
-                        Map<String, String> params = new HashMap<>();
-                        params.put("mid", mid);
-                        params.put("order_id", orderId);
-                        return params;
+                    public void onResponse(@NonNull Call<ApiResponse> call, @NonNull Response<ApiResponse> response) {
+                        if (response.isSuccessful() && response.body() != null) {
+                            ApiResponse apiResponse = response.body();
+                            String txnStatus = apiResponse.getTxnStatus();
+                            if (apiResponse.getStatus()) {
+                                switch (txnStatus) {
+                                    case "SUCCESS":
+                                        failedOrSuccessPaymentDialog(context, "SUCCESS", orderId);
+                                        break;
+                                    case "FAIL":
+                                        failedOrSuccessPaymentDialog(context, "FAIL", orderId);
+                                        break;
+                                    case "REJECT":
+                                        failedOrSuccessPaymentDialog(context, "REJECT", orderId);
+                                        break;
+                                    default:
+                                        failedOrSuccessPaymentDialog(context, "FAILED", orderId);
+                                        break;
+                                }
+                            }
+                        }
                     }
 
                     @Override
-                    public Map<String, String> getHeaders() throws AuthFailureError {
-                        Map<String, String> headers = new HashMap<>();
-                        String authHeader = "Basic "
-                                + Base64.encodeToString((publicKey + ":" + secretKey).getBytes(), Base64.NO_WRAP);
-                        headers.put("Authorization", authHeader);
-                        headers.put("Content-Type", "application/x-www-form-urlencoded");
-                        headers.put("User-Agent", "Mozilla/5.0 (Linux; Android 10; Mobile)");
-                        return headers;
+                    public void onFailure(@NonNull Call<ApiResponse> call, @NonNull Throwable t) {
+                        Log.e("API Error", "Network Error: " + t.getMessage());
+                        Toast.makeText(context, "Network error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
                     }
-                };
-
-                RequestQueue requestQueue = Volley.newRequestQueue(context);
-                requestQueue.add(stringRequest);
+                });
 
                 handler.postDelayed(this, pollingInterval);
             }
@@ -401,68 +300,30 @@ public class CheckoutActivity extends AppCompatActivity {
 
     public void createPaymentRequest(String publicKey, String secretKey, String mid, String amount, String orderId,
                                      String vpa, String customerName, String customerEmail, String customerMobile) {
-        StringRequest stringRequest = new StringRequest(Request.Method.POST,
-                "https://api.upitranzact.com/v1/payments/paymentRequestForOrder", response -> {
-            Log.d("API Response", "Response: " + response);
-            try {
-                JSONObject jsonResponse = new JSONObject(response);
-                if (jsonResponse.getBoolean("status")) {
+
+        ApiService apiService = RetrofitClient.getApiService(publicKey, secretKey);
+
+        Call<ApiResponse> call = apiService.createPaymentRequest(mid, amount, orderId, vpa,
+                "Add money", customerName, customerEmail, customerMobile);
+
+        call.enqueue(new Callback<ApiResponse>() {
+            @Override
+            public void onResponse(@NonNull Call<ApiResponse> call, @NonNull Response<ApiResponse> response) {
+                if (response.isSuccessful()) {
                     requestButton.setText("Verify and Pay");
                     requestPaymentDialog(context);
-                }
-            } catch (JSONException e) {
-                requestButton.setText("Verify and Pay");
-                Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
-            }
-        }, error -> {
-            if (error.networkResponse != null) {
-                try {
-                    String errorData = new String(error.networkResponse.data);
-                    JSONObject errorResponse = new JSONObject(errorData);
-
-                    String errorMessage = errorResponse.getString("msg");
-                    Log.e("API Error", "Message: " + errorMessage);
-                    Toast.makeText(context, errorMessage, Toast.LENGTH_SHORT).show();
+                } else {
                     requestButton.setText("Verify and Pay");
-                } catch (JSONException e) {
-                    Log.e("Network Error", "Response parse error: " + e.getMessage());
-                    Toast.makeText(context, e.getMessage(), Toast.LENGTH_SHORT).show();
-                    requestButton.setText("Verify and Pay");
+                    Toast.makeText(context, "Payment request failed", Toast.LENGTH_SHORT).show();
                 }
-            } else {
-                Log.e("Network Error", "Network error: " + error.getMessage());
-                Toast.makeText(context, error.getMessage(), Toast.LENGTH_SHORT).show();
-                requestButton.setText("Verify and Pay");
-            }
-        }) {
-            @Override
-            protected Map<String, String> getParams() {
-                Map<String, String> params = new HashMap<>();
-                params.put("mid", mid);
-                params.put("amount", amount);
-                params.put("order_id", orderId);
-                params.put("vpa", vpa);
-                params.put("note", "Add money");
-                params.put("customer_name", customerName);
-                params.put("customer_email", customerEmail);
-                params.put("customer_mobile", customerMobile);
-                return params;
             }
 
             @Override
-            public Map<String, String> getHeaders() throws AuthFailureError {
-                Map<String, String> headers = new HashMap<>();
-                String authHeader = "Basic "
-                        + Base64.encodeToString((publicKey + ":" + secretKey).getBytes(), Base64.NO_WRAP);
-                headers.put("Authorization", authHeader);
-                headers.put("Content-Type", "application/x-www-form-urlencoded");
-                headers.put("User-Agent", "Mozilla/5.0 (Linux; Android 10; Mobile)");
-                return headers;
+            public void onFailure(Call<ApiResponse> call, Throwable t) {
+                requestButton.setText("Verify and Pay");
+                Toast.makeText(context, "Network error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
             }
-        };
-
-        RequestQueue requestQueue = Volley.newRequestQueue(context);
-        requestQueue.add(stringRequest);
+        });
     }
 
     public void failedOrSuccessPaymentDialog(Context context, String status, String orderId) {
@@ -488,7 +349,7 @@ public class CheckoutActivity extends AppCompatActivity {
             lottieAnimationView.setAnimation(R.raw.success_animation);
             lottieAnimationView.setRepeatCount(LottieDrawable.INFINITE);
             lottieAnimationView.playAnimation();
-            new CountDownTimer(5000, 1000) {
+            new CountDownTimer(3000, 1000) {
                 @Override
                 public void onTick(long millisUntilFinished) {
                     int secondsRemaining = (int) (millisUntilFinished / 1000);
@@ -506,7 +367,7 @@ public class CheckoutActivity extends AppCompatActivity {
             lottieAnimationView.setAnimation(R.raw.failed_animation);
             lottieAnimationView.setRepeatCount(LottieDrawable.INFINITE);
             lottieAnimationView.playAnimation();
-            new CountDownTimer(5000, 1000) {
+            new CountDownTimer(3000, 1000) {
                 @Override
                 public void onTick(long millisUntilFinished) {
                     int secondsRemaining = (int) (millisUntilFinished / 1000);
@@ -524,7 +385,7 @@ public class CheckoutActivity extends AppCompatActivity {
             lottieAnimationView.setAnimation(R.raw.failed_animation);
             lottieAnimationView.setRepeatCount(LottieDrawable.INFINITE);
             lottieAnimationView.playAnimation();
-            new CountDownTimer(5000, 1000) {
+            new CountDownTimer(3000, 1000) {
                 @Override
                 public void onTick(long millisUntilFinished) {
                     int secondsRemaining = (int) (millisUntilFinished / 1000);
@@ -542,7 +403,7 @@ public class CheckoutActivity extends AppCompatActivity {
             lottieAnimationView.setAnimation(R.raw.failed_animation);
             lottieAnimationView.setRepeatCount(LottieDrawable.INFINITE);
             lottieAnimationView.playAnimation();
-            new CountDownTimer(5000, 1000) {
+            new CountDownTimer(3000, 1000) {
                 @Override
                 public void onTick(long millisUntilFinished) {
                     int secondsRemaining = (int) (millisUntilFinished / 1000);
@@ -686,7 +547,7 @@ public class CheckoutActivity extends AppCompatActivity {
         return str == null || str.trim().isEmpty();
     }
 
-    public void startCountdownTimer(int minutes, Context context) {
+    public void startCountdownTimer(int minutes) {
         long durationInMillis = (long) minutes * 60 * 1000;
 
         countDownTimer = new CountDownTimer(durationInMillis, 1000) {
@@ -709,7 +570,7 @@ public class CheckoutActivity extends AppCompatActivity {
     }
 
     private void notifyPaymentResult(boolean isSuccess, String order_id, String message) {
-        PaymentCallback callback = UpiTranzactSDK.getPaymentCallback(); // Retrieve the callback
+        PaymentCallback callback = UpiTranzactSDK.getPaymentCallback();
         if (callback != null) {
             if (isSuccess) {
                 callback.onPaymentSuccess(order_id, message);

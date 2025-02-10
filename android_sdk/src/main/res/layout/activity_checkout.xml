@@ -49,12 +49,11 @@
                         android:id="@+id/merchantName"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:fontFamily="@font/roboto_bold"
-                        android:text="UPITranzact"
-                        android:textColor="@color/black"
                         android:layout_marginEnd="50dp"
-                        android:textSize="19sp"
+                        android:fontFamily="@font/roboto_bold"
                         android:maxLines="1"
+                        android:textColor="@color/black"
+                        android:textSize="19sp"
                         android:textStyle="normal" />
 
                     <LinearLayout
@@ -122,8 +121,8 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:orientation="vertical"
                 android:layout_marginHorizontal="20dp"
+                android:orientation="vertical"
                 android:padding="0dp">
 
                 <LinearLayout
@@ -166,7 +165,6 @@
                                     android:layout_height="wrap_content"
                                     android:layout_marginStart="7dp"
                                     android:fontFamily="@font/roboto_regular"
-                                    android:text="INR 0"
                                     android:textColor="@color/black"
                                     android:textSize="15sp"
                                     android:textStyle="bold" />
@@ -247,13 +245,12 @@
                     android:orientation="horizontal">
 
                     <ImageView
-                        android:id="@+id/qr_code"
+                        android:id="@+id/qrImageView"
                         android:layout_width="120dp"
                         android:layout_height="120dp"
                         android:adjustViewBounds="true"
                         android:padding="15dp"
-                        android:scaleType="fitXY"
-                        android:src="@drawable/qr" />
+                        android:scaleType="fitXY" />
 
                     <LinearLayout
                         android:layout_width="wrap_content"
@@ -418,6 +415,8 @@
                                 android:layout_marginStart="7.5dp"
                                 android:layout_weight="1"
                                 android:background="@drawable/bg_with_stroke_selector"
+                                android:clickable="true"
+                                android:focusable="true"
                                 android:gravity="center_vertical">
 
                                 <LinearLayout
@@ -463,6 +462,8 @@
                                 android:layout_marginEnd="7.5dp"
                                 android:layout_weight="1"
                                 android:background="@drawable/bg_with_stroke_selector"
+                                android:clickable="true"
+                                android:focusable="true"
                                 android:gravity="center_vertical">
 
                                 <LinearLayout
@@ -499,6 +500,8 @@
                                 android:layout_marginStart="7.5dp"
                                 android:layout_weight="1"
                                 android:background="@drawable/bg_with_stroke_selector"
+                                android:clickable="true"
+                                android:focusable="true"
                                 android:gravity="center_vertical">
 
                                 <LinearLayout
@@ -544,6 +547,8 @@
                                 android:layout_marginEnd="7.5dp"
                                 android:layout_weight="1"
                                 android:background="@drawable/bg_with_stroke_selector"
+                                android:clickable="true"
+                                android:focusable="true"
                                 android:gravity="center_vertical">
 
                                 <LinearLayout

@@ -45,8 +45,16 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
+    
+    // Retrofit core library
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
 
-    implementation("com.android.volley:volley:1.2.1")
+    // Converter for JSON (Gson)
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+
+    // Logging interceptor (for debugging API calls)
+    implementation("com.squareup.okhttp3:logging-interceptor:4.10.0")
+
     implementation("com.makeramen:roundedimageview:2.3.0")
     implementation("com.airbnb.android:lottie:6.1.0")
 }

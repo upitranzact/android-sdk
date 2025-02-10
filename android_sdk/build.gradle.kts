@@ -49,8 +49,6 @@ dependencies {
     implementation("com.android.volley:volley:1.2.1")
     implementation("com.makeramen:roundedimageview:2.3.0")
     implementation("com.airbnb.android:lottie:6.1.0")
-    implementation("com.google.zxing:core:3.5.2")
-    implementation("com.journeyapps:zxing-android-embedded:4.3.0")
 }
 
 publishing {
